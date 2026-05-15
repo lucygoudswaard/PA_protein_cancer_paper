@@ -1173,7 +1173,7 @@ perform_cancer_cox_analysis_cutoff <- function(
     "sedentary_overall_average"
   )
   
-  covariates <- c("age", "smoking", "alcohol", "centre", "education", 'sex')
+  covariates <- c("age", "smoking", "alcohol", "education", "sex")
   if (include_bmi) covariates <- c(covariates, "bmi")
   
   # Get cancer event date vector
@@ -1251,7 +1251,7 @@ perform_cancer_cox_analysis_cutoff <- function(
     
     ## Fit Cox model
     form <- reformulate(
-      termlabels = c(predictor, covariates),
+      termlabels = c(predictor, covariates, "strata(centre)"),
       response = "Surv(t_entry, t_exit, event)"
     )
     
