@@ -1173,10 +1173,10 @@ perform_cancer_cox_analysis_cutoff <- function(
     "sedentary_overall_average"
   )
   
+  # IMPORTANT CHANGE: centre removed from covariates
   covariates <- c("age", "smoking", "alcohol", "education", "sex")
   if (include_bmi) covariates <- c(covariates, "bmi")
   
-  # Get cancer event date vector
   event_date_vec <- get_event_date(data, cancer_type)
   
   results_list <- list()
@@ -1190,76 +1190,100 @@ perform_cancer_cox_analysis_cutoff <- function(
         entry_date = f.90003.0.0 + lubridate::years(cutoff_years)
       ) %>%
       
-      ## Sex restrictions
+      ## sex restrictions
       {if (cancer_type %in% c("EC", "BC")) dplyr::filter(., sex == "Female") else .} %>%
       {if (cancer_type == "PC") dplyr::filter(., sex == "Male") else .} %>%
       
-      ## Keep valid rows
+      ## valid rows
       dplyr::filter(
         !is.na(.data[[predictor]]),
         complete.cases(dplyr::across(all_of(covariates))),
-        !is.na(entry_date)
+        !is.na(entry_date),
+        !is.na(centre)
       ) %>%
       
-      ## Remove events or deaths before entry
+      ## remove pre-entry events/deaths
       dplyr::filter(
         (is.na(event_date) | event_date >= entry_date),
         (is.na(death_date) | death_date >= entry_date)
       ) %>%
       
-      ## Safe time handling
+      ## survival setup
       dplyr::mutate(
-        
-        # Replace NA with admin censor for safe comparisons
         event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
         death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
         
-        # Exit = earliest of cancer, death, admin
         exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
         
-        # Time scale
         t_entry = as.numeric(entry_date),
         t_exit  = as.numeric(exit_date),
         
-        # Follow-up time
         followup_days = t_exit - t_entry,
         
-        # Event indicator
         event = ifelse(
           !is.na(event_date) &
             event_date <= death_date2 &
             event_date <= ADMIN_CENSOR_DATE,
           1, 0
         )
-      )
+      ) %>%
+      
+      dplyr::filter(t_exit > t_entry)
     
-    ## Diagnostics
     cat("\n---", cancer_type, predictor, "---\n")
+    cat("N:", nrow(df), "Events:", sum(df$event), "\n")
     
-    cat("Min follow-up days:", min(df$followup_days, na.rm = TRUE), "\n")
-    cat("Number with t_exit <= t_entry:",
-        sum(df$t_exit <= df$t_entry, na.rm = TRUE), "\n")
-    
-    cat("Number with negative follow-up:",
-        sum(df$followup_days < 0, na.rm = TRUE), "\n")
-    
-    cat("Number with zero follow-up:",
-        sum(df$followup_days == 0, na.rm = TRUE), "\n")
-    
-    ## Skip small samples
     if (nrow(df) < 50 || sum(df$event) < 10) next
     
-    ## Fit Cox model
+    # =========================
+    # MODEL WITH STRATIFIED CENTRE
+    # =========================
+    
     form <- reformulate(
-      termlabels = c(predictor, covariates, "strata(centre)"),
+      termlabels = c(
+        predictor,
+        covariates,
+        "strata(centre)"
+      ),
       response = "Surv(t_entry, t_exit, event)"
     )
     
-    fit <- survival::coxph(form, data = df)
-    ph_test <- survival::cox.zph(fit)
-    print(ph_test)
+    fit <- tryCatch(
+      survival::coxph(form, data = df, x = TRUE),
+      error = function(e) {
+        cat("COX FAILED:", e$message, "\n")
+        return(NULL)
+      }
+    )
     
-    ## Extract results
+    if (is.null(fit)) next
+    
+    # =========================
+    # PH ASSUMPTION TEST
+    # =========================
+    
+    ph_test <- tryCatch(
+      survival::cox.zph(fit),
+      error = function(e) return(NULL)
+    )
+    
+    ph_global_p <- NA
+    ph_predictor_p <- NA
+    
+    if (!is.null(ph_test)) {
+      print(ph_test)
+      
+      ph_global_p <- ph_test$table["GLOBAL", "p"]
+      
+      if (predictor %in% rownames(ph_test$table)) {
+        ph_predictor_p <- ph_test$table[predictor, "p"]
+      }
+    }
+    
+    # =========================
+    # OUTPUT
+    # =========================
+    
     res <- broom::tidy(fit, conf.int = TRUE) %>%
       dplyr::filter(term == predictor) %>%
       dplyr::mutate(
@@ -1267,7 +1291,10 @@ perform_cancer_cox_analysis_cutoff <- function(
         predictor = predictor,
         N = nrow(df),
         events = sum(df$event),
-        cutoff_years = cutoff_years
+        cutoff_years = cutoff_years,
+        ph_global_p = ph_global_p,
+        ph_predictor_p = ph_predictor_p,
+        model_type = "stratified_by_centre"
       )
     
     results_list[[length(results_list) + 1]] <- res
@@ -1275,7 +1302,6 @@ perform_cancer_cox_analysis_cutoff <- function(
   
   dplyr::bind_rows(results_list)
 }
-
 
 ## ================================
 ## Run analyses
@@ -1380,67 +1406,6 @@ for (activity in activity_vars) {
   # Save the plot to a PDF file with the activity variable name
   ggsave(filename = paste0(results_dir, "figures/forest_PA_", activity, "_cancer_inc_prev.pdf"), plot = plot, width = 7, height = 7)
 }
-
-## Plot the three models of physical activity and cancer
-# Combine all three data frames into one
-final_results_adjusted_filtered$model <- "Fully adjusted (excluding BMI)"
-final_results_filtered_age_sex$model <- "Age and sex adjusted"
-final_results_filtered$model <- "Fully adjusted (including BMI)"
-
-# Combine the three data frames
-combined_results <- bind_rows(final_results_adjusted_filtered,
-                              final_results_filtered_age_sex,
-                              final_results_filtered)
-
-# Add a new column to distinguish between "_status" and "_incidental" outcomes
-combined_results <- combined_results %>%
-  mutate(
-    outcome_type = ifelse(grepl("_status_combined_control$", outcome), "Prevalent", "Incident"),
-    physical_activity_type = case_when(
-      grepl("overall_acceleration_average", predictor) ~ "Overall acceleration",
-      grepl("moderate_to_vigorous_quantile", predictor) ~ "Moderate to vigorous activity",
-      grepl("sedentary_overall_average", predictor) ~ "Sedentary",
-      TRUE ~ "Other"
-    )
-  )
-
-combined_results <- combined_results %>%
-  mutate(cancer_type = recode(cancer_type,
-                              CRC = "Colorectal",
-                              EC = "Endometrial",
-                              BC = "Breast",
-                              PC = "Prostate"))
-
-# Order the outcomes (Prevalent first, then Incident)
-combined_results$outcome_type <- factor(combined_results$outcome_type, 
-                                        levels = c("Prevalent", "Incident"))
-
-# Plot and save
-pdf(paste0(results_dir, "figures/forest_PA_cancer_all_models.pdf"), height = 12, width = 12)
-ggplot(combined_results, aes(x = estimate, y = cancer_type, color = model, shape = outcome_type)) +
-  geom_point(position = position_dodge(width = 0.5), size = 3) +  # Separate points by cancer type and outcome type
-  geom_errorbarh(aes(xmin = estimate - 1.96 * std.error, xmax = estimate + 1.96 * std.error),
-                 position = position_dodge(width = 0.5), height = 0.2) +  # Add error bars for confidence intervals
-  facet_wrap(~ physical_activity_type, scales = "free_y", ncol = 1) +  # One plot for each PA type
-  geom_vline(xintercept = 0, linetype = "dotted", color = "black") +  # Add a dotted line at beta = 0
-  theme_minimal() +
-  labs(
-    x = "Log odds of cancer risk per unit higher activity measure (±95% CI)",
-    y = "Cancer site",
-    title = "",
-    color = "Model",
-    shape = "Outcome Type",
-    linetype = "Model Adjustment"
-  ) +
-  theme(
-    legend.position = "top",
-    strip.text = element_text(size = 12),  # Adjust facet labels font size
-    axis.text.y = element_text(size = 10),  # Adjust y-axis labels font size
-    legend.key = element_blank(),  # To avoid a box around legend keys
-    axis.title.x = element_text(size = 12),  # Adjust x-axis title font size
-    axis.title.y = element_text(size = 12)   # Adjust y-axis title font size
-  )
-dev.off()
 
 ## Proteins associated with all measures of PA
 protein_PA_names <- fread(file = paste0(results_dir, "tables/overall_PA_protein_regression_fully_adjusted_bmi.txt"), header = T, sep = "\t")
@@ -1766,110 +1731,153 @@ cancer_PA_protein <- cancer_PA_protein %>%
 ## Cox model function (CLEAN + STRATIFIED)
 ## =========================================
 
-cox_model_cutoff <- function(
+perform_cancer_cox_analysis_cutoff <- function(
+    cancer_type,
     data,
-    cancer,
-    protein,
-    cutoff_years = 0
+    include_bmi = TRUE,
+    cutoff_years = 0,
+    ADMIN_CENSOR_DATE = as.Date("2022-05-09")
 ) {
   
-  event_date_vec <- get_event_date(data, cancer)
+  library(dplyr)
+  library(survival)
+  library(broom)
   
-  df <- data %>%
-    
-    dplyr::mutate(
-      event_date = event_date_vec,
-      death_date = f.40000.0.0,
-      
-      # entry time anchor (protein measurement baseline + optional cutoff)
-      entry_date = dob + years(cutoff_years)
-    ) %>%
-    
-    ## Remove invalid risk sets
-    dplyr::filter(
-      (is.na(event_date) | event_date >= entry_date),
-      (is.na(death_date) | death_date >= entry_date)
-    ) %>%
-    
-    ## Survival structure
-    dplyr::mutate(
-      event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
-      death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
-      
-      exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
-      
-      age_entry = as.numeric(entry_date - dob) / 365.25,
-      age_exit  = as.numeric(exit_date - dob) / 365.25,
-      
-      event = ifelse(
-        !is.na(event_date) &
-          event_date <= death_date2 &
-          event_date <= ADMIN_CENSOR_DATE,
-        1, 0
-      )
-    ) %>%
-    
-    ## Keep valid rows
-    dplyr::filter(
-      age_exit > age_entry,
-      !is.na(.data[[protein]]),
-      !is.na(centre)
-    )
-  
-  ## Skip small models
-  if (nrow(df) < 50 || sum(df$event) < 10) return(NULL)
-  
-  ## =========================
-  ## Cox model (PA-style)
-  ## =========================
-  
-  form <- as.formula(
-    paste0(
-      "Surv(age_entry, age_exit, event) ~ ",
-      protein,
-      " + sex + smoking + alcohol + education + bmi",
-      " + strata(centre)"
-    )
+  predictors <- c(
+    "overall_acceleration_average",
+    "moderate_to_vigorous_quantile",
+    "sedentary_overall_average"
   )
   
-  fit <- survival::coxph(form, data = df, x = TRUE)
+  # IMPORTANT CHANGE: centre removed from covariates
+  covariates <- c("age", "smoking", "alcohol", "education", "sex")
+  if (include_bmi) covariates <- c(covariates, "bmi")
   
-  ## Optional PH test (safe wrapper)
-  ph_test <- tryCatch(
-    survival::cox.zph(fit),
-    error = function(e) NULL
-  )
+  event_date_vec <- get_event_date(data, cancer_type)
   
-  ## Extract results
-  res <- broom::tidy(fit, conf.int = TRUE) %>%
-    dplyr::filter(term == protein) %>%
-    dplyr::mutate(
-      cancer_type = cancer,
-      protein = protein,
-      N = nrow(df),
-      events = sum(df$event),
-      cutoff_years = cutoff_years,
-      model_type = "stratified_by_centre_age_timescale"
-    )
+  results_list <- list()
   
-  ## Add PH info if available
-  if (!is.null(ph_test)) {
-    ph_tab <- ph_test$table
-    res$ph_global_p <- ph_tab["GLOBAL", "p"]
+  for (predictor in predictors) {
     
-    if (protein %in% rownames(ph_tab)) {
-      res$ph_protein_p <- ph_tab[protein, "p"]
-    } else {
-      res$ph_protein_p <- NA
+    df <- data %>%
+      dplyr::mutate(
+        event_date = event_date_vec,
+        death_date = f.40000.0.0,
+        entry_date = f.90003.0.0 + lubridate::years(cutoff_years)
+      ) %>%
+      
+      ## sex restrictions
+      {if (cancer_type %in% c("EC", "BC")) dplyr::filter(., sex == "Female") else .} %>%
+      {if (cancer_type == "PC") dplyr::filter(., sex == "Male") else .} %>%
+      
+      ## valid rows
+      dplyr::filter(
+        !is.na(.data[[predictor]]),
+        complete.cases(dplyr::across(all_of(covariates))),
+        !is.na(entry_date),
+        !is.na(centre)
+      ) %>%
+      
+      ## remove pre-entry events/deaths
+      dplyr::filter(
+        (is.na(event_date) | event_date >= entry_date),
+        (is.na(death_date) | death_date >= entry_date)
+      ) %>%
+      
+      ## survival setup
+      dplyr::mutate(
+        event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
+        death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
+        
+        exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
+        
+        t_entry = as.numeric(entry_date),
+        t_exit  = as.numeric(exit_date),
+        
+        followup_days = t_exit - t_entry,
+        
+        event = ifelse(
+          !is.na(event_date) &
+            event_date <= death_date2 &
+            event_date <= ADMIN_CENSOR_DATE,
+          1, 0
+        )
+      ) %>%
+      
+      dplyr::filter(t_exit > t_entry)
+    
+    cat("\n---", cancer_type, predictor, "---\n")
+    cat("N:", nrow(df), "Events:", sum(df$event), "\n")
+    
+    if (nrow(df) < 50 || sum(df$event) < 10) next
+    
+    # =========================
+    # MODEL WITH STRATIFIED CENTRE
+    # =========================
+    
+    form <- reformulate(
+      termlabels = c(
+        predictor,
+        covariates,
+        "strata(centre)"
+      ),
+      response = "Surv(t_entry, t_exit, event)"
+    )
+    
+    fit <- tryCatch(
+      survival::coxph(form, data = df, x = TRUE),
+      error = function(e) {
+        cat("COX FAILED:", e$message, "\n")
+        return(NULL)
+      }
+    )
+    
+    if (is.null(fit)) next
+    
+    # =========================
+    # PH ASSUMPTION TEST
+    # =========================
+    
+    ph_test <- tryCatch(
+      survival::cox.zph(fit),
+      error = function(e) return(NULL)
+    )
+    
+    ph_global_p <- NA
+    ph_predictor_p <- NA
+    
+    if (!is.null(ph_test)) {
+      print(ph_test)
+      
+      ph_global_p <- ph_test$table["GLOBAL", "p"]
+      
+      if (predictor %in% rownames(ph_test$table)) {
+        ph_predictor_p <- ph_test$table[predictor, "p"]
+      }
     }
-  } else {
-    res$ph_global_p <- NA
-    res$ph_protein_p <- NA
+    
+    # =========================
+    # OUTPUT
+    # =========================
+    
+    res <- broom::tidy(fit, conf.int = TRUE) %>%
+      dplyr::filter(term == predictor) %>%
+      dplyr::mutate(
+        cancer_type = cancer_type,
+        predictor = predictor,
+        N = nrow(df),
+        events = sum(df$event),
+        cutoff_years = cutoff_years,
+        ph_global_p = ph_global_p,
+        ph_predictor_p = ph_predictor_p,
+        model_type = "stratified_by_centre"
+      )
+    
+    results_list[[length(results_list) + 1]] <- res
   }
   
-  return(res)
+  dplyr::bind_rows(results_list)
 }
-
 
 ## =========================================
 ## Run models
