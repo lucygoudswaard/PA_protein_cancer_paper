@@ -178,11 +178,11 @@ mismatches <- cancer[mismatch_rows, ]
 
 ## Change mismatches to NA
 cancer$CRC_true_control <- ifelse(cancer$CRC_true_control %in% c("case", "true_control"), 
-                              cancer$CRC_true_control, 
-                           NA)
-                           
-## Derive CRC variable for diagnosis after 2012-08-01. Changed to 2015-12-31 for sensitivity analysis.
-cutoff_date <- as.IDate("2012-08-01")
+                                  cancer$CRC_true_control, 
+                                  NA)
+
+## Derive CRC variable for diagnosis after 2015-12-31 
+cutoff_date <- as.IDate("2015-12-31")
 
 # Create the CRC_incidental column based on the conditions
 cancer <- cancer %>%
@@ -345,11 +345,11 @@ mismatches <- cancer[mismatch_rows, ]
 
 ## Change mismatches to NA
 cancer$BC_true_control <- ifelse(cancer$BC_true_control %in% c("case", "true_control"), 
-                              cancer$BC_true_control, 
-                              NA)
+                                 cancer$BC_true_control, 
+                                 NA)
 
 ## Derive BC variable for diagnosis after date
-cutoff_date <- as.IDate("2012-08-01")
+cutoff_date <- as.IDate("2015-12-31")
 
 # Create the CRC_incidental column based on the conditions
 cancer <- cancer %>%
@@ -475,11 +475,11 @@ mismatch_rows <- which(cancer$EC_true_control == "control_mismatch")
 mismatches <- cancer[mismatch_rows, ]
 
 cancer$EC_true_control <- ifelse(cancer$EC_true_control %in% c("case", "true_control"), 
-                              cancer$EC_true_control, 
-                              NA)
+                                 cancer$EC_true_control, 
+                                 NA)
 
 ## Derive EC variable for diagnosis after a cutoff date
-cutoff_date <- as.IDate("2012-08-01")
+cutoff_date <- as.IDate("2015-12-31")
 
 cancer <- cancer %>%
   mutate(EC_incidental = case_when(
@@ -597,11 +597,11 @@ mismatch_rows <- which(cancer$PC_true_control == "control_mismatch")
 mismatches <- cancer[mismatch_rows, ]
 
 cancer$PC_true_control <- ifelse(cancer$PC_true_control %in% c("case", "true_control"), 
-                              cancer$PC_true_control, 
-                              NA)
+                                 cancer$PC_true_control, 
+                                 NA)
 
 ## Derive PC variable for diagnosis after a cutoff date
-cutoff_date <- as.IDate("2012-08-01")
+cutoff_date <- as.IDate("2015-12-31")
 
 cancer <- cancer %>%
   mutate(PC_incidental = case_when(
@@ -657,11 +657,11 @@ names(cancer_PA)[names(cancer_PA) == "Age at recruitment"] <- "age"
 names(cancer_PA)[names(cancer_PA) == "Sex"] <- "sex"
 names(cancer_PA)[names(cancer_PA) == "Alcohol drinker status | Instance 0"] <- "alcohol"
 cancer_PA$alcohol <- ifelse(cancer_PA$alcohol == "Current", 2,
-                                ifelse(cancer_PA$alcohol == "Previous", 1,
-                                       ifelse(cancer_PA$alcohol == "Never", 0, NA)))
+                            ifelse(cancer_PA$alcohol == "Previous", 1,
+                                   ifelse(cancer_PA$alcohol == "Never", 0, NA)))
 names(cancer_PA)[names(cancer_PA) == "Ever smoked | Instance 0"] <- "smoking"
 cancer_PA$smoking <- ifelse(cancer_PA$smoking == "Yes", 1,
-                                ifelse(cancer_PA$smoking == "No", 0, NA))
+                            ifelse(cancer_PA$smoking == "No", 0, NA))
 names(cancer_PA)[names(cancer_PA) == "Townsend deprivation index at recruitment"] <- "townsend"
 names(cancer_PA)[names(cancer_PA) == "Body mass index (BMI) | Instance 0"] <- "bmi"
 names(cancer_PA)[names(cancer_PA) == "UK Biobank assessment centre | Instance 0"] <- "centre"
@@ -722,7 +722,7 @@ for (i in cancer_types) {
 ## Make a new case/control variable for all 4 cancer types (so someone is only a control if they don't have that cancer,
 ## or any of the other 3)
 cancer_PA$combined_cancer_status <- ifelse(cancer_PA$CRC_status == "case" | cancer_PA$EC_status == "case" |
-                                      cancer_PA$BC_status == "case" | cancer_PA$PC_status == "case", "case", "control" )
+                                             cancer_PA$BC_status == "case" | cancer_PA$PC_status == "case", "case", "control" )
 cancer_PA$combined_cancer_incidental <- ifelse(cancer_PA$CRC_incidental == "case" | cancer_PA$EC_incidental == "case" |
                                                  cancer_PA$BC_incidental == "case" | cancer_PA$PC_incidental == "case", "case", "control" )
 cancer_PA$sex <- as.factor(cancer_PA$sex)
@@ -774,7 +774,7 @@ cancer_PA$PC_incidental_combined_control <- factor(
          ifelse(cancer_PA$PC_incidental == "control" & cancer_PA$combined_cancer_incidental == "control", 0, NA)),
   levels = c(0, 1), labels = c("control", "case")
 )
-         
+
 ## Create a complete case dataset
 cancer_PA_cc <- cancer_PA %>%
   filter(
@@ -896,7 +896,7 @@ for (i in cancer_types_age_sex) {
 final_results_age_sex <- do.call(rbind, all_cancer_results_age_sex)
 
 # Save combined results
-write.table(final_results_age_sex, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_age_sex.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
+write.table(final_results_age_sex, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_age_sex_2015.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
 
 # Restrict to relevant rows
 final_results_filtered_age_sex <- final_results_age_sex %>%
@@ -996,7 +996,7 @@ for (i in cancer_types) {
 final_results_adjusted <- do.call(rbind, all_cancer_results_fully_adjusted)
 
 # Save combined results
-write.table(final_results_adjusted, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_adjusted.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
+write.table(final_results_adjusted, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_adjusted_2015.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
 
 # Restrict to relevant rows
 final_results_adjusted_filtered <- final_results_adjusted %>%
@@ -1008,7 +1008,7 @@ final_results_adjusted_filtered <- final_results_adjusted %>%
 
 # Save restricted results
 write.table(final_results_adjusted_filtered, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_adjusted_filtered.txt"), 
-  col.names = TRUE, row.names = FALSE, sep = "\t")
+            col.names = TRUE, row.names = FALSE, sep = "\t")
 
 ## Regression function - PA and cancer fully adjusted
 perform_cancer_analysis <- function(cancer_type, data) {
@@ -1095,7 +1095,7 @@ for (i in cancer_types) {
 final_results <- do.call(rbind, all_cancer_results)
 
 # Save combined results
-write.table(final_results, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_fully_adjusted_bmi.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
+write.table(final_results, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_fully_adjusted_bmi_2015.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
 
 # Restrict to relevant rows
 final_results_filtered <- final_results %>%
@@ -1111,336 +1111,158 @@ write.table(final_results_filtered, file = paste0(results_dir, "tables/all_cance
 
 ## Do the Cox PH model for PA and cancer
 ## Read in first date of wear variable
+## ================================
+## Load and prepare dates
+## ================================
+
 date_wear <- read.delim(
   file = paste0(input_dir, "16391_from_Becky/output_extracted_variables_16391_lucy_8.1.26.tsv"),
   stringsAsFactors = FALSE
-)
-date_wear <- date_wear[,c("projectID", "f.90003.0.0")]
+)[, c("projectID", "f.90003.0.0")]
 
-cancer_PA_cc <- merge(cancer_PA_cc, date_wear, by.x = "eid", by.y = "projectID", all.x = T, all.y = F)
-cancer_PA_cc$f.90003.0.0 <- as.Date(cancer_PA_cc$f.90003.0.0, format = "%Y-%m-%d %H:%M:%S")
+date_death <- read.delim(
+  file = paste0(input_dir, "16391_from_Becky/output_extracted_variables_16391_lucy2.tsv"),
+  stringsAsFactors = FALSE
+)[, c("projectID", "f.40000.0.0")]
 
+# Ensure no duplicates before merging
+date_wear  <- date_wear[!duplicated(date_wear$projectID), ]
+date_death <- date_death[!duplicated(date_death$projectID), ]
+
+# Merge
+cancer_PA_cc <- merge(cancer_PA_cc, date_wear,
+                      by.x = "eid", by.y = "projectID", all.x = TRUE)
+cancer_PA_cc <- merge(cancer_PA_cc, date_death,
+                      by.x = "eid", by.y = "projectID", all.x = TRUE)
+
+# Convert to Date safely
+cancer_PA_cc$f.90003.0.0 <- as.Date(cancer_PA_cc$f.90003.0.0)
+cancer_PA_cc$f.40000.0.0 <- as.Date(cancer_PA_cc$f.40000.0.0)
+
+
+## ================================
 ## Function to get event date
+## ================================
+
 get_event_date <- function(data, cancer) {
   icd10 <- paste0(cancer, "_ICD10_date")
   icd9  <- paste0(cancer, "_ICD9_date")
   
-  as.Date(ifelse(
-    !is.na(data[[icd10]]),
-    data[[icd10]],
-    data[[icd9]]
-  ), origin = "1970-01-01")
+  dplyr::coalesce(
+    as.Date(data[[icd10]]),
+    as.Date(data[[icd9]])
+  )
 }
 
-## Cox PH with delayed entry (prevalent cases included)
-perform_cancer_cox_analysis <- function(cancer_type, data, include_bmi = TRUE, ENTRY_DATE = as.Date("2012-08-01"), ADMIN_CENSOR_DATE = as.Date("2020-03-31")) {
+
+## ================================
+## Cox PH function with delayed entry + death censoring
+## ================================
+
+perform_cancer_cox_analysis_cutoff <- function(
+    cancer_type,
+    data,
+    include_bmi = TRUE,
+    cutoff_years = 0,
+    ADMIN_CENSOR_DATE = as.Date("2022-05-09")
+) {
   
-  predictors <- c("overall_acceleration_average",
-                  "moderate_to_vigorous_quantile",
-                  "sedentary_overall_average")
+  predictors <- c(
+    "overall_acceleration_average",
+    "moderate_to_vigorous_quantile",
+    "sedentary_overall_average"
+  )
   
-  covariates <- c("age", "smoking", "alcohol", "centre", "education")
+  covariates <- c("age", "smoking", "alcohol", "centre", "education", 'sex')
   if (include_bmi) covariates <- c(covariates, "bmi")
   
-  # Get event date
-  event_date <- get_event_date(data, cancer_type)
+  # Get cancer event date vector
+  event_date_vec <- get_event_date(data, cancer_type)
   
   results_list <- list()
   
   for (predictor in predictors) {
     
     df <- data %>%
-      mutate(
-        event_date = event_date,
-        entry_date = ENTRY_DATE
+      dplyr::mutate(
+        event_date = event_date_vec,
+        death_date = f.40000.0.0,
+        entry_date = f.90003.0.0 + lubridate::years(cutoff_years)
       ) %>%
       
-      # Sex-specific restriction
-      {if (cancer_type %in% c("EC", "BC")) filter(., sex == "Female") else .} %>%
-      {if (cancer_type == "PC") filter(., sex == "Male") else .} %>%
+      ## Sex restrictions
+      {if (cancer_type %in% c("EC", "BC")) dplyr::filter(., sex == "Female") else .} %>%
+      {if (cancer_type == "PC") dplyr::filter(., sex == "Male") else .} %>%
       
-      # Keep complete cases
-      filter(!is.na(.data[[predictor]]), complete.cases(across(all_of(covariates)))) %>%
+      ## Keep valid rows
+      dplyr::filter(
+        !is.na(.data[[predictor]]),
+        complete.cases(dplyr::across(all_of(covariates))),
+        !is.na(entry_date)
+      ) %>%
       
-      # Delayed entry: everyone starts at ENTRY_DATE
-      mutate(
+      ## Remove events or deaths before entry
+      dplyr::filter(
+        (is.na(event_date) | event_date >= entry_date),
+        (is.na(death_date) | death_date >= entry_date)
+      ) %>%
+      
+      ## Safe time handling
+      dplyr::mutate(
+        
+        # Replace NA with admin censor for safe comparisons
+        event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
+        death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
+        
+        # Exit = earliest of cancer, death, admin
+        exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
+        
+        # Time scale
         t_entry = as.numeric(entry_date),
-        t_exit  = as.numeric(ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE,
-                                    event_date,
-                                    ADMIN_CENSOR_DATE)),
-        event   = ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE, 1, 0)
+        t_exit  = as.numeric(exit_date),
+        
+        # Follow-up time
+        followup_days = t_exit - t_entry,
+        
+        # Event indicator
+        event = ifelse(
+          !is.na(event_date) &
+            event_date <= death_date2 &
+            event_date <= ADMIN_CENSOR_DATE,
+          1, 0
+        )
       )
     
-    # Skip if too few participants/events
+    ## Diagnostics
+    cat("\n---", cancer_type, predictor, "---\n")
+    
+    cat("Min follow-up days:", min(df$followup_days, na.rm = TRUE), "\n")
+    cat("Number with t_exit <= t_entry:",
+        sum(df$t_exit <= df$t_entry, na.rm = TRUE), "\n")
+    
+    cat("Number with negative follow-up:",
+        sum(df$followup_days < 0, na.rm = TRUE), "\n")
+    
+    cat("Number with zero follow-up:",
+        sum(df$followup_days == 0, na.rm = TRUE), "\n")
+    
+    ## Skip small samples
     if (nrow(df) < 50 || sum(df$event) < 10) next
     
-    # Fit Cox PH model
+    ## Fit Cox model
     form <- reformulate(
       termlabels = c(predictor, covariates),
       response = "Surv(t_entry, t_exit, event)"
     )
     
     fit <- survival::coxph(form, data = df)
+    ph_test <- survival::cox.zph(fit)
+    print(ph_test)
     
-    # Store results
+    ## Extract results
     res <- broom::tidy(fit, conf.int = TRUE) %>%
-      filter(term == predictor) %>%
-      mutate(
-        cancer_type = cancer_type,
-        predictor = predictor,
-        N = nrow(df),
-        events = sum(df$event)
-      )
-    
-    results_list[[length(results_list) + 1]] <- res
-  }
-  
-  bind_rows(results_list)
-}
-
-## -------------------------
-## Run Cox PH for all cancer types
-## -------------------------
-
-## Run analysis for all cancer types (with BMI)
-all_cancer_results_bmi <- lapply(cancer_types, function(ct) perform_cancer_cox_analysis(ct, cancer_PA_cc, include_bmi = TRUE))
-final_results_bmi <- bind_rows(all_cancer_results_bmi)
-
-write.table(
-  final_results_bmi,
-  file = paste0(results_dir, "tables/all_cancer_PA_cox_results_entry2012_fully_adjusted_bmi.txt"),
-  col.names = TRUE,
-  row.names = FALSE,
-  sep = "\t"
-)
-
-## Run analysis for all cancer types (without BMI)
-all_cancer_results_no_bmi <- lapply(cancer_types, function(ct) perform_cancer_cox_analysis(ct, cancer_PA_cc, include_bmi = FALSE))
-final_results_no_bmi <- bind_rows(all_cancer_results_no_bmi)
-
-write.table(
-  final_results_no_bmi,
-  file = paste0(results_dir, "tables/all_cancer_PA_cox_results_entry2012_no_bmi.txt"),
-  col.names = TRUE,
-  row.names = FALSE,
-  sep = "\t"
-)
-
-## Change cut off date to 2015 (with BMI)
-perform_cancer_cox_analysis_2015 <- function(cancer_type, data, include_bmi = TRUE, ENTRY_DATE = as.Date("2015-12-31"), ADMIN_CENSOR_DATE = as.Date("2020-03-31")) {
-  
-  predictors <- c("overall_acceleration_average",
-                  "moderate_to_vigorous_quantile",
-                  "sedentary_overall_average")
-  
-  covariates <- c("age", "smoking", "alcohol", "centre", "education")
-  if (include_bmi) covariates <- c(covariates, "bmi")
-  
-  # Get event date
-  event_date <- get_event_date(data, cancer_type)
-  
-  results_list <- list()
-  
-  for (predictor in predictors) {
-    
-    df <- data %>%
-      mutate(
-        event_date = event_date,
-        entry_date = ENTRY_DATE
-      ) %>%
-      
-      # Sex-specific restriction
-      {if (cancer_type %in% c("EC", "BC")) filter(., sex == "Female") else .} %>%
-      {if (cancer_type == "PC") filter(., sex == "Male") else .} %>%
-      
-      # Keep complete cases
-      filter(!is.na(.data[[predictor]]), complete.cases(across(all_of(covariates)))) %>%
-      
-      # Delayed entry: everyone starts at ENTRY_DATE
-      mutate(
-        t_entry = as.numeric(entry_date),
-        t_exit  = as.numeric(ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE,
-                                    event_date,
-                                    ADMIN_CENSOR_DATE)),
-        event   = ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE, 1, 0)
-      )
-    
-    # Skip if too few participants/events
-    if (nrow(df) < 50 || sum(df$event) < 10) next
-    
-    # Fit Cox PH model
-    form <- reformulate(
-      termlabels = c(predictor, covariates),
-      response = "Surv(t_entry, t_exit, event)"
-    )
-    
-    fit <- survival::coxph(form, data = df)
-    
-    # Store results
-    res <- broom::tidy(fit, conf.int = TRUE) %>%
-      filter(term == predictor) %>%
-      mutate(
-        cancer_type = cancer_type,
-        predictor = predictor,
-        N = nrow(df),
-        events = sum(df$event)
-      )
-    
-    results_list[[length(results_list) + 1]] <- res
-  }
-  
-  bind_rows(results_list)
-}
-
-all_cancer_results_bmi_2015 <- lapply(cancer_types, function(ct) perform_cancer_cox_analysis_2015(ct, cancer_PA_cc, include_bmi = TRUE))
-final_results_bmi_2015 <- bind_rows(all_cancer_results_bmi_2015)
-
-write.table(
-  final_results_bmi_2015,
-  file = paste0(results_dir, "tables/all_cancer_PA_cox_results_entry2015_bmi.txt"),
-  col.names = TRUE,
-  row.names = FALSE,
-  sep = "\t"
-)
-
-## Change cut off date to 2015 (without BMI)
-perform_cancer_cox_analysis_2015 <- function(cancer_type, data, include_bmi = FALSE, ENTRY_DATE = as.Date("2015-12-31"), ADMIN_CENSOR_DATE = as.Date("2020-03-31")) {
-  
-  predictors <- c("overall_acceleration_average",
-                  "moderate_to_vigorous_quantile",
-                  "sedentary_overall_average")
-  
-  covariates <- c("age", "smoking", "alcohol", "centre", "education")
-  if (include_bmi) covariates <- c(covariates, "bmi")
-  
-  # Get event date
-  event_date <- get_event_date(data, cancer_type)
-  
-  results_list <- list()
-  
-  for (predictor in predictors) {
-    
-    df <- data %>%
-      mutate(
-        event_date = event_date,
-        entry_date = ENTRY_DATE
-      ) %>%
-      
-      # Sex-specific restriction
-      {if (cancer_type %in% c("EC", "BC")) filter(., sex == "Female") else .} %>%
-      {if (cancer_type == "PC") filter(., sex == "Male") else .} %>%
-      
-      # Keep complete cases
-      filter(!is.na(.data[[predictor]]), complete.cases(across(all_of(covariates)))) %>%
-      
-      # Delayed entry: everyone starts at ENTRY_DATE
-      mutate(
-        t_entry = as.numeric(entry_date),
-        t_exit  = as.numeric(ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE,
-                                    event_date,
-                                    ADMIN_CENSOR_DATE)),
-        event   = ifelse(!is.na(event_date) & event_date > entry_date & event_date <= ADMIN_CENSOR_DATE, 1, 0)
-      )
-    
-    # Skip if too few participants/events
-    if (nrow(df) < 50 || sum(df$event) < 10) next
-    
-    # Fit Cox PH model
-    form <- reformulate(
-      termlabels = c(predictor, covariates),
-      response = "Surv(t_entry, t_exit, event)"
-    )
-    
-    fit <- survival::coxph(form, data = df)
-    
-    # Store results
-    res <- broom::tidy(fit, conf.int = TRUE) %>%
-      filter(term == predictor) %>%
-      mutate(
-        cancer_type = cancer_type,
-        predictor = predictor,
-        N = nrow(df),
-        events = sum(df$event)
-      )
-    
-    results_list[[length(results_list) + 1]] <- res
-  }
-  
-  bind_rows(results_list)
-}
-
-all_cancer_results_no_bmi_2015 <- lapply(cancer_types, function(ct) perform_cancer_cox_analysis_2015(ct, cancer_PA_cc, include_bmi = FALSE))
-final_results_no_bmi_2015 <- bind_rows(all_cancer_results_no_bmi_2015)
-
-write.table(
-  final_results_no_bmi_2015,
-  file = paste0(results_dir, "tables/all_cancer_PA_cox_results_entry2015_no_bmi.txt"),
-  col.names = TRUE,
-  row.names = FALSE,
-  sep = "\t"
-)
-
-## Redo PA-cancer Cox PH but use the wear date
-perform_cancer_cox_analysis_cutoff <- function(cancer_type, data, include_bmi = TRUE, 
-                                               cutoff_years = 0, 
-                                               ADMIN_CENSOR_DATE = as.Date("2020-03-31")) {
-  
-  predictors <- c("overall_acceleration_average",
-                  "moderate_to_vigorous_quantile",
-                  "sedentary_overall_average")
-  
-  covariates <- c("age", "smoking", "alcohol", "centre", "education")
-  if (include_bmi) covariates <- c(covariates, "bmi")
-  
-  # Get event date
-  event_date <- get_event_date(data, cancer_type)
-  
-  results_list <- list()
-  
-  for (predictor in predictors) {
-    
-    df <- data %>%
-      mutate(
-        event_date = event_date,
-        # Delayed entry: add cutoff_years to accelerometer date
-        entry_date = f.90003.0.0 + years(cutoff_years)
-      ) %>%
-      
-      # Sex-specific restriction
-      {if (cancer_type %in% c("EC", "BC")) filter(., sex == "Female") else .} %>%
-      {if (cancer_type == "PC") filter(., sex == "Male") else .} %>%
-      
-      # Keep complete cases and remove those with missing entry date
-      filter(!is.na(.data[[predictor]]), complete.cases(across(all_of(covariates))),
-             !is.na(entry_date)) %>%
-      
-      # Remove events that occur before the cutoff (t_entry)
-      filter(is.na(event_date) | event_date >= entry_date) %>%
-      
-      # Compute time for Cox model
-      mutate(
-        t_entry = as.numeric(entry_date),
-        t_exit  = as.numeric(ifelse(!is.na(event_date) & event_date <= ADMIN_CENSOR_DATE,
-                                    event_date,
-                                    ADMIN_CENSOR_DATE)),
-        event   = ifelse(!is.na(event_date) & event_date <= ADMIN_CENSOR_DATE, 1, 0)
-      )
-    
-    # Skip if too few participants/events
-    if (nrow(df) < 50 || sum(df$event) < 10) next
-    
-    # Fit Cox PH model
-    form <- reformulate(
-      termlabels = c(predictor, covariates),
-      response = "Surv(t_entry, t_exit, event)"
-    )
-    
-    fit <- coxph(form, data = df)
-    
-    # Store results
-    res <- broom::tidy(fit, conf.int = TRUE) %>%
-      filter(term == predictor) %>%
-      mutate(
+      dplyr::filter(term == predictor) %>%
+      dplyr::mutate(
         cancer_type = cancer_type,
         predictor = predictor,
         N = nrow(df),
@@ -1451,33 +1273,31 @@ perform_cancer_cox_analysis_cutoff <- function(cancer_type, data, include_bmi = 
     results_list[[length(results_list) + 1]] <- res
   }
   
-  bind_rows(results_list)
+  dplyr::bind_rows(results_list)
 }
 
 
-# 1-year cutoff
-all_cancer_bmi_1yr <- lapply(cancer_types, function(ct) {
-  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, include_bmi = TRUE, cutoff_years = 1)
-})
-final_bmi_1yr <- bind_rows(all_cancer_bmi_1yr)
+## ================================
+## Run analyses
+## ================================
 
-# 2-year cutoff
-all_cancer_bmi_2yr <- lapply(cancer_types, function(ct) {
-  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, include_bmi = TRUE, cutoff_years = 2)
-})
-final_bmi_2yr <- bind_rows(all_cancer_bmi_2yr)
+# BMI models
+final_bmi_1yr <- dplyr::bind_rows(lapply(cancer_types, function(ct) {
+  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, TRUE, 1)
+}))
 
-# 1-year cutoff
-all_cancer_no_bmi_1yr <- lapply(cancer_types, function(ct) {
-  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, include_bmi = FALSE, cutoff_years = 1)
-})
-final_no_bmi_1yr <- bind_rows(all_cancer_no_bmi_1yr)
+final_bmi_2yr <- dplyr::bind_rows(lapply(cancer_types, function(ct) {
+  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, TRUE, 2)
+}))
 
-# 2-year cutoff
-all_cancer_no_bmi_2yr <- lapply(cancer_types, function(ct) {
-  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, include_bmi = FALSE, cutoff_years = 2)
-})
-final_no_bmi_2yr <- bind_rows(all_cancer_no_bmi_2yr)
+# No BMI models
+final_no_bmi_1yr <- dplyr::bind_rows(lapply(cancer_types, function(ct) {
+  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, FALSE, 1)
+}))
+
+final_no_bmi_2yr <- dplyr::bind_rows(lapply(cancer_types, function(ct) {
+  perform_cancer_cox_analysis_cutoff(ct, cancer_PA_cc, FALSE, 2)
+}))
 
 ## Write all of these to file 
 # Define output file paths
@@ -1506,106 +1326,6 @@ for (name in names(results_list)) {
     row.names = FALSE
   )
 }
-
-## Regression function - PA and cancer fully adjusted (with PCs)
-perform_cancer_analysis <- function(cancer_type, data) {
-  
-  # Variables for logistic regression
-  outcome_vars <- c(paste0(cancer_type, "_status_combined_control"), paste0(cancer_type, "_incidental_combined_control"))
-  predictors <- c("overall_acceleration_average", "moderate_to_vigorous_quantile", "sedentary_overall_average")
-  covariates <- c("age", "smoking", "alcohol", "centre", "education", "bmi", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7",
-                  "PC8", "PC9", "PC10")
-  
-  # Store results
-  results_list <- list()
-  
-  for (outcome in outcome_vars) {
-    for (predictor in predictors) {
-      
-      # Filter data for the specific cancer type
-      filtered_data <- data %>%
-        filter(!is.na(.data[[outcome]]) & !is.na(.data[[predictor]]))
-      
-      # Apply sex-specific filtering
-      if (cancer_type == "EC" || cancer_type == "BC") {
-        filtered_data <- filtered_data %>% filter(sex == "Female")
-      } else if (cancer_type == "PC") {
-        filtered_data <- filtered_data %>% filter(sex == "Male")
-      }
-      
-      # Filter for missing values in covariates
-      filtered_data <- filtered_data %>%
-        filter(!is.na(age) & !is.na(smoking) & !is.na(alcohol) & 
-                 !is.na(centre) & !is.na(fasting) & !is.na(education) & !is.na(bmi))
-      
-      # Check number of rows after filtering
-      cat("Rows for", outcome, "and", predictor, "after filtering: ", nrow(filtered_data), "\n")
-      
-      # Skip the model if there are no rows
-      if (nrow(filtered_data) == 0) {
-        cat("Skipping", outcome, "and", predictor, "due to no valid data.\n")
-        next
-      }
-      
-      # Count the cases and controls in the filtered data
-      case_control_counts <- filtered_data %>%
-        group_by(status = .data[[outcome]]) %>%
-        summarise(count = n(), .groups = 'drop')
-      
-      num_cases <- case_control_counts$count[case_control_counts$status == "case"]
-      num_controls <- case_control_counts$count[case_control_counts$status == "control"]
-      
-      # Fit the logistic regression model
-      model <- glm(as.formula(paste(outcome, "~", paste(c(predictor, covariates), collapse = "+"))), 
-                   data = filtered_data, family = binomial)
-      
-      # Collect the results
-      results <- broom::tidy(model, conf.int = TRUE) %>%
-        filter(term != "(Intercept)") %>%
-        mutate(
-          cancer_type = cancer_type,
-          outcome = outcome,
-          predictor = predictor,
-          N = nrow(filtered_data),  # Number of observations used in regression
-          case_control_label = paste("Cases: ", ifelse(is.na(num_cases), 0, num_cases), 
-                                     ", Controls: ", ifelse(is.na(num_controls), 0, num_controls))
-        )
-      
-      results_list[[length(results_list) + 1]] <- results
-    }
-  }
-  
-  # Combine all results for this cancer
-  combined_results <- do.call(rbind, results_list)
-  
-  return(combined_results)
-}
-
-all_cancer_results_PCs <- list()
-
-# Loop over each cancer and analyze
-for (i in cancer_types) {
-  cancer_results_PCs <- perform_cancer_analysis(i, cancer_PA_cc)
-  all_cancer_results_PCs[[i]] <- cancer_results_PCs
-}
-
-# Combine results for all cancers
-final_results_PCs <- do.call(rbind, all_cancer_results_PCs)
-
-# Save combined results
-write.table(final_results_PCs, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_fully_adjusted_PCs_bmi.txt"), col.names = TRUE, row.names = FALSE, sep = "\t")
-
-# Restrict to relevant rows
-final_results_filtered_PCs <- final_results_PCs %>%
-  filter(term %in% c("overall_acceleration_average", "moderate_to_vigorous_quantile", "sedentary_overall_average")) %>%
-  filter(outcome %in% c("CRC_status_combined_control", "CRC_incidental_combined_control", 
-                        "BC_status_combined_control", "BC_incidental_combined_control", 
-                        "PC_status_combined_control", "PC_incidental_combined_control", 
-                        "EC_status_combined_control", "EC_incidental_combined_control"))
-
-# Save restricted results
-write.table(final_results_filtered_PCs, file = paste0(results_dir, "tables/all_cancer_PA_regression_results_filtered_fully_adjusted_PCs_bmi.txt"), 
-            col.names = TRUE, row.names = FALSE, sep = "\t")
 
 # Define full names for each cancer type
 # Mapping cancer abbreviations to full names
@@ -1666,13 +1386,11 @@ for (activity in activity_vars) {
 final_results_adjusted_filtered$model <- "Fully adjusted (excluding BMI)"
 final_results_filtered_age_sex$model <- "Age and sex adjusted"
 final_results_filtered$model <- "Fully adjusted (including BMI)"
-final_results_filtered_PCs$model <- "Fully adjusted (including BMI and PCs)"
 
 # Combine the three data frames
 combined_results <- bind_rows(final_results_adjusted_filtered,
                               final_results_filtered_age_sex,
-                              final_results_filtered,
-                              final_results_filtered_PCs)
+                              final_results_filtered)
 
 # Add a new column to distinguish between "_status" and "_incidental" outcomes
 combined_results <- combined_results %>%
@@ -1872,7 +1590,7 @@ cancer_PA_protein_table <- cancer_PA_protein_table %>%
   )
 
 cat_characteristics_all <- cancer_PA_protein_table[,c("age", "sex", "townsend", "education", "bmi", "smoking", "alcohol", "centre", "moderate_to_vigorous_overall_average",
-                                              "sedentary_overall_average", "overall_acceleration_average") ]
+                                                      "sedentary_overall_average", "overall_acceleration_average") ]
 
 # Generate the summary table with updated code
 table1 <- tbl_summary(
@@ -1957,7 +1675,7 @@ ggplot(all_results, aes(x = beta_glm, y = protein, color = cancer_type, shape = 
   guides(shape = "none")  # Remove the legend for variable_type
 dev.off()
 
-## All proteins and incident cancer
+## Proteins and incident cancer adjusted for covarieates (excluding BMI)
 protein_PA_name_list2 <- rnt_protein_names
 all_results_list2 <- list()
 dependent_variables2 <- c("PC_incidental_combined_control", "EC_incidental_combined_control", "BC_incidental_combined_control", "CRC_incidental_combined_control")
@@ -1999,400 +1717,202 @@ write.table(all_results_proteins,
             file = output_file2, 
             col.names = TRUE, row.names = FALSE, sep = "\t")
 
-## Repeat regression and plot for prevalent cancer variable
-# List of the cancer_status dependent variables (status variables)
-# List of dependent variables for cancer status
-dependent_variables2 <- c("PC_status_combined_control", "EC_status_combined_control", "BC_status_combined_control", "CRC_status_combined_control")
-
-# Initialize an empty list to store results
-all_results_list2 <- list()
-
-# Loop over the dependent variables (e.g., PC_status, EC_status, etc.)
-for (dependent_var in dependent_variables2) {
-  
-  # Ensure the dependent variable is a factor (e.g., "PC", "EC", "BC", etc.)
-  cancer_PA_protein[[dependent_var]] <- as.factor(cancer_PA_protein[[dependent_var]])
-  
-  # Run logistic models and add FDR-adjusted p-values
-  prot_results <- logistic_model_with_fdr(
-    wdata = cancer_PA_protein,
-    dependent = dependent_var,
-    proteins = protein_PA_name_list,  # List of protein traits
-    covariables = c("age", "sex", "smoking", "alcohol", "centre", "fasting", "bmi", "education")
-  )
-  
-  # Sort results by raw p-values (adjusted p-values)
-  prot_results <- prot_results[order(prot_results$P_FDR), ]
-  
-  # Add a column to indicate cancer type and status type
-  cancer_type <- gsub("_status_combined_control", "", dependent_var)  # Extract cancer type from the dependent variable name
-  prot_results$cancer_type <- cancer_type  # Add cancer type to results
-  prot_results$variable_type <- "Status"  # Set status type as "Status"
-  
-  # Add the results for this cancer type to the list
-  all_results_list2[[dependent_var]] <- prot_results
-}
-
-# Combine all the results into one data frame
-all_results2 <- dplyr::bind_rows(all_results_list2)
-
-# Calculate Confidence Intervals for the results
-all_results2$CI_lower <- all_results2$beta_glm - 1.96 * all_results2$se_glm
-all_results2$CI_upper <- all_results2$beta_glm + 1.96 * all_results2$se_glm
-
-# Clean up the protein names
-all_results2$protein <- gsub("^rnt_", "", all_results2$protein)
-
-# Define the output file name
-output_file2 <- paste0(results_dir, "tables/protein_cancer_status_reg_fully_adjusted_bmi_logistic.txt")
-
-# Save results to a file
-write.table(all_results2, 
-            file = output_file2, 
-            col.names = TRUE, row.names = FALSE, sep = "\t")
-
-# Plot the forest plot using ggplot2
-pdf(paste0(results_dir, "figures/forest_protein_prev_reg_fully_adjusted_bmi_logistic.pdf"), height = 28, width = 8)
-ggplot(all_results2, aes(x = beta_glm, y = protein, color = cancer_type, shape = variable_type)) +
-  geom_point(size = 3, position = position_dodge(width = 1)) +  # Add dodging to avoid overlap
-  geom_errorbarh(aes(xmin = CI_lower, xmax = CI_upper), height = 0.2, position = position_dodge(width = 1)) +  # Apply dodging to error bars
-  scale_color_manual(
-    values = c("PC" = "blue", "EC" = "purple", "BC" = "red", "CRC" = "orange"),  # Colors for each cancer type
-    labels = c("BC" = "Breast Cancer", "CRC" = "Colorectal Cancer", "EC" = "Endometrial Cancer", "PC" = "Prostate Cancer")  # Custom labels
-  ) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "black") +
-  labs(
-    x = "Log odds of cancer per SD unit higher protein (±95%)", 
-    y = "Proteins", 
-    title = "Association between protein and cancer risk (prevalent)",
-    color = "Cancer Site"  # Title of the color legend
-  ) +
-  theme_minimal() +
-  theme(legend.position = "bottom") +  # Adjust legend position
-  guides(shape = "none")  # Remove the legend for variable_type
-dev.off()
-
-# Add a new column to indicate whether the result is "Incidental" or "Status" 
-all_results$variable_type <- "Incident"
-all_results2$variable_type <- "Prevalent"
-
-# Combine the results for both incidental and status variables
-combined_results <- dplyr::bind_rows(all_results, all_results2)
-
-# Now let's calculate the confidence intervals
-combined_results$CI_lower <- combined_results$beta_glm - 1.96 * combined_results$se_glm
-combined_results$CI_upper <- combined_results$beta_glm + 1.96 * combined_results$se_glm
-
-# Clean up the protein names (removing the prefix 'rnt_')
-combined_results$protein <- gsub("^rnt_", "", combined_results$protein)
-
-# Plot the combined forest plot using ggplot2
-# Number of proteins per page
-proteins_per_page <- 20
-
-# Calculate the number of pages needed
-num_pages <- ceiling(n_distinct(combined_results$protein) / proteins_per_page)
-
-# Save plots into a multi-page PDF
-pdf(paste0(results_dir, "figures/forest_protein_cancer_combined_fully_adjusted_bmi_logistic.pdf"), height = 16, width = 8)
-
-# Generate the paginated plots
-for (page in 1:num_pages) {
-  p <- ggplot(combined_results, aes(x = beta_glm, y = protein, color = cancer_type, shape = variable_type)) +
-    geom_point(size = 3, position = position_dodge(width = 1)) +  # Add dodging to avoid overlap
-    geom_errorbarh(aes(xmin = CI_lower, xmax = CI_upper), height = 0.2, position = position_dodge(width = 1)) +  # Apply dodging to error bars
-    scale_color_manual(
-      values = c("PC" = "blue", "EC" = "purple", "BC" = "red", "CRC" = "orange"),  # Colors for each cancer type
-      labels = c("BC" = "Breast Cancer", "CRC" = "Colorectal Cancer", "EC" = "Endometrial Cancer", "PC" = "Prostate Cancer")  # Custom labels
-    ) +
-    scale_shape_manual(
-      values = c("Prevalent" = 16, "Incident" = 17)  # Assign shapes: 16 = filled circle, 17 = triangle
-    ) +
-    geom_vline(xintercept = 0, linetype = "dotted", color = "black") +  # Dotted vertical line at x = 0
-    labs(
-      x = "Log odds of cancer risk (±95% CI) per SD higher protein", 
-      y = "Proteins", 
-      title = "",
-      color = "Cancer Site",  # Title of the color legend
-      shape = "Outcome Type"  # Title of the shape legend
-    ) +
-    theme_minimal() +
-    theme(
-      legend.position = "bottom",   # Place the legends at the bottom
-      legend.box = "horizontal",    # Arrange the legends horizontally
-      legend.box.margin = margin(10, 0, 0, 0),  # Add space around the legends
-      legend.key.size = unit(1.5, "lines"),  # Adjust size of legend keys
-      strip.text = element_blank(), # Remove the facet strip text (protein names above plots)
-      strip.background = element_blank() # Remove strip background to clean up
-    ) +
-    guides(
-      shape = guide_legend(override.aes = list(size = 4)),  # Adjust the size of the legend symbols for shapes
-      color = guide_legend(ncol = 1)  # Make sure the cancer site legend is a single column
-    ) +
-    ggforce::facet_wrap_paginate(~protein, ncol = 1, nrow = proteins_per_page, page = page, scales = "free_y")
-  
-  print(p)
-}
-
-# Close the PDF device
-dev.off()
 
 ## Do Cox PH for protein and cancer
+## =========================================
+## Load + merge
+## =========================================
+
+cancer_PA_protein <- merge(
+  cancer_PA_protein,
+  date_death,
+  by.x = "eid",
+  by.y = "projectID",
+  all.x = TRUE
+)
+
+ADMIN_CENSOR_DATE <- as.Date("2022-05-09")
+
+
+## =========================================
+## Event date function (clean version)
+## =========================================
+
 get_event_date <- function(data, cancer) {
   icd10 <- paste0(cancer, "_ICD10_date")
   icd9  <- paste0(cancer, "_ICD9_date")
   
-  as.Date(ifelse(
-    !is.na(data[[icd10]]),
-    data[[icd10]],
-    data[[icd9]]
-  ), origin = "1970-01-01")
+  dplyr::coalesce(
+    as.Date(data[[icd10]]),
+    as.Date(data[[icd9]])
+  )
 }
 
-# Administrative censor date
-ADMIN_CENSOR_DATE <- as.Date("2020-03-31")
 
-# Prepare protein dataset with entry age
+## =========================================
+## Prepare dataset (FIX FACTORS HERE)
+## =========================================
+
 cancer_PA_protein <- cancer_PA_protein %>%
-  mutate(
-    age_entry = age  # age at protein measurement
+  dplyr::mutate(
+    f.40000.0.0 = as.Date(f.40000.0.0),
+    dob = as.Date(paste0(`Year of birth`, "-06-30")),
+    
+    sex = factor(sex),
   )
 
-# Cox PH model function with delayed entry cutoff
-cox_model_cutoff <- function(data, cancer, protein, covariates, cutoff_years = 0) {
+
+## =========================================
+## Cox model function (CLEAN + STRATIFIED)
+## =========================================
+
+cox_model_cutoff <- function(
+    data,
+    cancer,
+    protein,
+    cutoff_years = 0
+) {
   
-  # Compute event dates
-  event_date <- get_event_date(data, cancer)
+  event_date_vec <- get_event_date(data, cancer)
   
   df <- data %>%
-    mutate(
-      event_date = event_date,
+    
+    dplyr::mutate(
+      event_date = event_date_vec,
+      death_date = f.40000.0.0,
       
-      # Baseline entry date plus optional cutoff in years
-      entry_date = as.Date(paste0(`Year of birth`, "-06-30")) +
-        age_entry * 365.25 + years(cutoff_years)
+      # entry time anchor (protein measurement baseline + optional cutoff)
+      entry_date = dob + years(cutoff_years)
     ) %>%
     
-    # Exclude events before entry (delayed entry)
-    filter(is.na(event_date) | event_date >= entry_date) %>%
-    
-    mutate(
-      # Event indicator
-      event = ifelse(!is.na(event_date) & event_date <= ADMIN_CENSOR_DATE, 1, 0),
-      
-      # Censoring date
-      censor_date = ifelse(event == 1, event_date, ADMIN_CENSOR_DATE) %>%
-        as.Date(origin = "1970-01-01"),
-      
-      # Age at exit (age timescale)
-      age_exit = age_entry + as.numeric(censor_date - entry_date) / 365.25
+    ## Remove invalid risk sets
+    dplyr::filter(
+      (is.na(event_date) | event_date >= entry_date),
+      (is.na(death_date) | death_date >= entry_date)
     ) %>%
     
-    # Keep only valid rows
-    filter(
+    ## Survival structure
+    dplyr::mutate(
+      event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
+      death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
+      
+      exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
+      
+      age_entry = as.numeric(entry_date - dob) / 365.25,
+      age_exit  = as.numeric(exit_date - dob) / 365.25,
+      
+      event = ifelse(
+        !is.na(event_date) &
+          event_date <= death_date2 &
+          event_date <= ADMIN_CENSOR_DATE,
+        1, 0
+      )
+    ) %>%
+    
+    ## Keep valid rows
+    dplyr::filter(
       age_exit > age_entry,
       !is.na(.data[[protein]]),
-      complete.cases(across(all_of(covariates)))
+      !is.na(centre)
     )
   
-  # Skip if too few participants or events
+  ## Skip small models
   if (nrow(df) < 50 || sum(df$event) < 10) return(NULL)
   
-  # Cox model formula
+  ## =========================
+  ## Cox model (PA-style)
+  ## =========================
+  
   form <- as.formula(
     paste0(
       "Surv(age_entry, age_exit, event) ~ ",
-      protein, " + ",
-      paste(covariates, collapse = " + ")
+      protein,
+      " + sex + smoking + alcohol + education + bmi",
+      " + strata(centre)"
     )
   )
   
-  fit <- coxph(form, data = df)
+  fit <- survival::coxph(form, data = df, x = TRUE)
   
-  # Return tidy results for the protein term
-  broom::tidy(fit, conf.int = TRUE) %>%
-    filter(term == protein) %>%
-    mutate(
-      protein = protein,
+  ## Optional PH test (safe wrapper)
+  ph_test <- tryCatch(
+    survival::cox.zph(fit),
+    error = function(e) NULL
+  )
+  
+  ## Extract results
+  res <- broom::tidy(fit, conf.int = TRUE) %>%
+    dplyr::filter(term == protein) %>%
+    dplyr::mutate(
       cancer_type = cancer,
+      protein = protein,
       N = nrow(df),
       events = sum(df$event),
-      cutoff_years = cutoff_years
+      cutoff_years = cutoff_years,
+      model_type = "stratified_by_centre_age_timescale"
     )
+  
+  ## Add PH info if available
+  if (!is.null(ph_test)) {
+    ph_tab <- ph_test$table
+    res$ph_global_p <- ph_tab["GLOBAL", "p"]
+    
+    if (protein %in% rownames(ph_tab)) {
+      res$ph_protein_p <- ph_tab[protein, "p"]
+    } else {
+      res$ph_protein_p <- NA
+    }
+  } else {
+    res$ph_global_p <- NA
+    res$ph_protein_p <- NA
+  }
+  
+  return(res)
 }
 
-# Covariates and cancers
-covariates <- c("sex", "smoking", "alcohol", "centre", "bmi", "education")
+
+## =========================================
+## Run models
+## =========================================
+
 cancer_types <- c("PC", "EC", "BC", "CRC")
-
-# Run Cox models with a 2-year cutoff
 cutoff_years <- 2
-cox_results_cutoff <- list()
 
-for (cancer in cancer_types) {
-  for (prot in protein_PA_name_list) {
-    res <- cox_model_cutoff(
+cox_results <- purrr::map_dfr(cancer_types, function(cancer) {
+  purrr::map_dfr(protein_PA_name_list, function(protein) {
+    cox_model_cutoff(
       data = cancer_PA_protein,
       cancer = cancer,
-      protein = prot,
-      covariates = covariates,
+      protein = protein,
       cutoff_years = cutoff_years
     )
-    if (!is.null(res)) cox_results_cutoff[[length(cox_results_cutoff) + 1]] <- res
-  }
-}
+  })
+})
 
-cox_results_cutoff_df <- bind_rows(cox_results_cutoff)
 
-## Add hazard ratios and 95% CI
-cox_results_cutoff_df <- cox_results_cutoff_df %>%
-  mutate(
-    HR = exp(estimate),                 # hazard ratio
-    HR_conf_low = exp(conf.low),        # lower 95% CI
-    HR_conf_high = exp(conf.high)       # upper 95% CI
+## =========================================
+## Add hazard ratios
+## =========================================
+
+cox_results <- cox_results %>%
+  dplyr::mutate(
+    HR = exp(estimate),
+    HR_conf_low = exp(conf.low),
+    HR_conf_high = exp(conf.high)
   )
 
+
+## =========================================
+## Save output
+## =========================================
+
 write.table(
-  cox_results_cutoff_df,
-  file = paste0(results_dir,
-                "tables/protein_cancer_incidence_cox_age_2years.txt"),
+  cox_results,
+  file = paste0(
+    results_dir,
+    "tables/protein_cancer_incidence_cox_age_2years.txt"
+  ),
   sep = "\t",
   row.names = FALSE,
   col.names = TRUE
 )
-
-## Redo PA-protein analysis in all controls
-cancer_PA_protein_controls <- cancer_PA_protein %>%
-  filter(combined_cancer_status == "control")
-
-## Function to remove single level factors
-remove_single_level_factors <- function(data) {
-  factor_vars <- names(data)[sapply(data, is.factor)]  # Identify factor columns
-  for (var in factor_vars) {
-    if (length(unique(data[[var]])) < 2) {  # Check if only one level exists
-      data[[var]] <- NULL  # Remove the factor column
-    }
-  }
-  return(data)
-}
-
-### Run regression over all protein change cols
-linear_model <- function(wdata, dependent, independent, covariables) {
-  ##############################
-  ### 1. Define Model Data Frame
-  ##############################
-  if (is.na(covariables[1])) {
-    model_variables <- c(dependent, independent)
-  } else {
-    model_variables <- c(dependent, covariables, independent)
-  }
-  
-  mod_data <- wdata[, model_variables, drop = FALSE]
-  
-  ##############################
-  ### 2. Perform Linear Model 
-  ##############################
-  perform_lm <- function(data, dependent, independent, covariables) {
-    # Remove single-level factors
-    data <- remove_single_level_factors(data)
-    
-    # Ensure data is valid
-    if (nrow(data) < 2 || length(unique(data[[dependent]])) < 2) {
-      return(c(n_lm = NA, rsq_adj_lm = NA, beta_lm = NA, se_lm = NA, P_lm = NA))
-    }
-    
-    # Construct formula
-    if (is.na(covariables[1])) {
-      form <- formula(paste0(dependent, " ~ ", independent))
-    } else {
-      form <- formula(paste0(dependent, " ~ ", independent, " + ", paste0(covariables, collapse = " + ")))
-    }
-    
-    # Fit linear model
-    lm_mod <- lm(form, data = data)
-    
-    # Extract summary stats
-    s <- summary(lm_mod)
-    n <- length(residuals(s)); names(n) <- "n_lm"
-    rsq <- s$adj.r.squared; names(rsq) <- "rsq_adj_lm"
-    beta <- s$coefficients[2, 1]; names(beta) <- "beta_lm"
-    se <- s$coefficients[2, 2]; names(se) <- "se_lm"
-    pval <- s$coefficients[2, 4]; names(pval) <- "P_lm"
-    
-    c(n, rsq, beta, se, pval)
-  }
-  
-  # Perform Analysis with Updated Handling
-  combined_results <- perform_lm(mod_data, dependent, independent, covariables)
-  
-  # Male Analysis
-  male_data <- subset(mod_data, sex == "Male")
-  male_data <- droplevels(male_data)
-  male_data <- male_data[complete.cases(male_data), ]
-  male_results <- if (nrow(male_data) > 0) {
-    perform_lm(male_data, dependent, independent, covariables[!(covariables %in% "sex")])
-  } else {
-    c(n_lm = NA, rsq_adj_lm = NA, beta_lm = NA, se_lm = NA, P_lm = NA)
-  }
-  
-  # Female Analysis
-  female_data <- subset(mod_data, sex == "Female")
-  female_data <- droplevels(female_data)
-  female_data <- female_data[complete.cases(female_data), ]
-  female_results <- if (nrow(female_data) > 0) {
-    perform_lm(female_data, dependent, independent, covariables[!(covariables %in% "sex")])
-  } else {
-    c(n_lm = NA, rsq_adj_lm = NA, beta_lm = NA, se_lm = NA, P_lm = NA)
-  }
-  
-  ##############################
-  ### 4. Combine Results
-  ##############################
-  protein_name <- dependent; names(protein_name) <- "protein"
-  
-  results <- c(
-    protein_name,
-    combined_results,
-    setNames(male_results, paste0("male_", names(male_results))),
-    setNames(female_results, paste0("female_", names(female_results)))
-  )
-  
-  return(results)
-}
-
-## Overall activity and protein in controls, fully adjusted
-controls_overall_PA_protein3 = t( sapply(rnt_protein_names, function(trait){
-  linear_model(wdata = cancer_PA_protein_controls, 
-               dependent = trait, 
-               independent = "overall_acceleration_average",
-               covariables =  c("age", "sex", "smoking", "alcohol", "centre", "fasting", "education", "bmi"))
-}) )
-controls_overall_PA_protein3 <- as.data.frame(controls_overall_PA_protein3)
-controls_overall_PA_protein3$P_lm <- as.numeric(controls_overall_PA_protein3$P_lm)
-controls_overall_PA_protein3 <- controls_overall_PA_protein3[order(controls_overall_PA_protein3$P_lm), ]
-write.table(controls_overall_PA_protein3, file = paste0(results_dir, "tables/controls_overall_PA_protein_regression_fully_adjusted_bmi.txt"), col.names = T, row.names = F, sep = "\t")
-
-## Sedentary and protein in controls, fully adjusted 
-controls_sedentary_PA_protein3 = t( sapply(rnt_protein_names, function(trait){
-  linear_model(wdata = cancer_PA_protein_controls, 
-               dependent = trait, 
-               independent = "sedentary_overall_average",
-               covariables =  c("age", "sex", "smoking", "alcohol", "centre", "fasting", "education", "bmi"))
-}) )
-controls_sedentary_PA_protein3 <- as.data.frame(controls_sedentary_PA_protein3)
-controls_sedentary_PA_protein3$P_lm <- as.numeric(controls_sedentary_PA_protein3$P_lm)
-controls_sedentary_PA_protein3 <- controls_sedentary_PA_protein3[order(controls_sedentary_PA_protein3$P_lm), ]
-write.table(controls_sedentary_PA_protein3, file = paste0(results_dir, "tables/controls_sedentary_PA_protein_regression_full_adjusted_bmi.txt"), col.names = T, row.names = F, sep = "\t")
-
-## Moderate_to_vigorous quantile and proteins in controls, fully adjusted
-controls_mod_vig_PA_quant_numeric_protein3 = t( sapply(rnt_protein_names, function(trait){
-  linear_model(wdata = cancer_PA_protein_controls, 
-               dependent = trait, 
-               independent = "moderate_to_vigorous_quantile",  # Changed to moderate_to_vigorous_quantile
-               covariables =  c("age", "sex", "smoking", "alcohol", "centre", "fasting", "education", "bmi"))
-}) )
-controls_mod_vig_PA_quant_numeric_protein3 <- as.data.frame(controls_mod_vig_PA_quant_numeric_protein3)
-controls_mod_vig_PA_quant_numeric_protein3$P_lm <- as.numeric(controls_mod_vig_PA_quant_numeric_protein3$P_lm)
-controls_mod_vig_PA_quant_numeric_protein3 <- controls_mod_vig_PA_quant_numeric_protein3[order(controls_mod_vig_PA_quant_numeric_protein3$P_lm), ]
-write.table(controls_mod_vig_PA_quant_numeric_protein3, file = paste0(results_dir, "tables/controls_mod_vig_PA_quantile_numeric_protein_regression_fully_adjusted_bmi.txt"), col.names = T, row.names = F, sep = "\t")
-
