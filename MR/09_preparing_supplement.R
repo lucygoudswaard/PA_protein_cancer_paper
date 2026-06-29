@@ -36,7 +36,7 @@ overall_PA_protein_sig <- overall_PA_protein_regression_bmi %>%
 
 
 ## protein-cancer tables
-protein_cancer_cox_PH_bmi <- read.table(paste0(results_dir, "tables/protein_cancer_incidence_cox_age_2years.txt"), header = T, sep = "\t")
+protein_cancer_cox_PH_bmi <- read.table(paste0(results_dir, "tables/protein_cancer_incidence_cox_fully_adjusted_bmi_2years.txt"), header = T, sep = "\t")
 pa_prot_cancer_list <- protein_cancer_cox_PH_bmi %>%
   filter(p.value < 0.001) %>%
   mutate(protein = str_remove(protein, "^rnt_"),

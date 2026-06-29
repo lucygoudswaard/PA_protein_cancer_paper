@@ -1683,11 +1683,13 @@ write.table(all_results_proteins,
             col.names = TRUE, row.names = FALSE, sep = "\t")
 
 
-## Do Cox PH for protein and cancer
 ## =========================================
-## Load + merge
+## Cox PH for protein and cancer incidence
 ## =========================================
 
+## =========================================
+## Merge
+## =========================================
 cancer_PA_protein <- merge(
   cancer_PA_protein,
   date_death,
@@ -1700,7 +1702,7 @@ ADMIN_CENSOR_DATE <- as.Date("2022-05-09")
 
 
 ## =========================================
-## Event date function (clean version)
+## Event date function
 ## =========================================
 
 get_event_date <- function(data, cancer) {
@@ -1715,172 +1717,119 @@ get_event_date <- function(data, cancer) {
 
 
 ## =========================================
-## Prepare dataset (FIX FACTORS HERE)
+## Prepare dataset
 ## =========================================
 
 cancer_PA_protein <- cancer_PA_protein %>%
-  dplyr::mutate(
+  mutate(
     f.40000.0.0 = as.Date(f.40000.0.0),
     dob = as.Date(paste0(`Year of birth`, "-06-30")),
-    
-    sex = factor(sex),
+    sex = factor(sex)
   )
 
 
 ## =========================================
-## Cox model function (CLEAN + STRATIFIED)
+## Cox model function
 ## =========================================
 
-perform_cancer_cox_analysis_cutoff <- function(
-    cancer_type,
-    data,
-    include_bmi = TRUE,
-    cutoff_years = 0,
-    ADMIN_CENSOR_DATE = as.Date("2022-05-09")
-) {
+cox_model_cutoff <- function(data, cancer, protein, cutoff_years = 0) {
   
-  library(dplyr)
-  library(survival)
-  library(broom)
+  event_date_vec <- get_event_date(data, cancer)
   
-  predictors <- c(
-    "overall_acceleration_average",
-    "moderate_to_vigorous_quantile",
-    "sedentary_overall_average"
-  )
-  
-  # IMPORTANT CHANGE: centre removed from covariates
-  covariates <- c("age", "smoking", "alcohol", "education", "sex")
-  if (include_bmi) covariates <- c(covariates, "bmi")
-  
-  event_date_vec <- get_event_date(data, cancer_type)
-  
-  results_list <- list()
-  
-  for (predictor in predictors) {
+  df <- data %>%
+    mutate(
+      event_date = event_date_vec,
+      death_date = f.40000.0.0,
+      entry_date = dob + years(cutoff_years)
+    ) %>%
     
-    df <- data %>%
-      dplyr::mutate(
-        event_date = event_date_vec,
-        death_date = f.40000.0.0,
-        entry_date = f.90003.0.0 + lubridate::years(cutoff_years)
-      ) %>%
+    filter(
+      (is.na(event_date) | event_date >= entry_date),
+      (is.na(death_date) | death_date >= entry_date)
+    ) %>%
+    
+    mutate(
+      event_date2 = coalesce(event_date, ADMIN_CENSOR_DATE),
+      death_date2 = coalesce(death_date, ADMIN_CENSOR_DATE),
       
-      ## sex restrictions
-      {if (cancer_type %in% c("EC", "BC")) dplyr::filter(., sex == "Female") else .} %>%
-      {if (cancer_type == "PC") dplyr::filter(., sex == "Male") else .} %>%
+      exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
       
-      ## valid rows
-      dplyr::filter(
-        !is.na(.data[[predictor]]),
-        complete.cases(dplyr::across(all_of(covariates))),
-        !is.na(entry_date),
-        !is.na(centre)
-      ) %>%
+      age_entry = as.numeric(entry_date - dob) / 365.25,
+      age_exit  = as.numeric(exit_date - dob) / 365.25,
       
-      ## remove pre-entry events/deaths
-      dplyr::filter(
-        (is.na(event_date) | event_date >= entry_date),
-        (is.na(death_date) | death_date >= entry_date)
-      ) %>%
-      
-      ## survival setup
-      dplyr::mutate(
-        event_date2 = dplyr::coalesce(event_date, ADMIN_CENSOR_DATE),
-        death_date2 = dplyr::coalesce(death_date, ADMIN_CENSOR_DATE),
-        
-        exit_date = pmin(event_date2, death_date2, ADMIN_CENSOR_DATE),
-        
-        t_entry = as.numeric(entry_date),
-        t_exit  = as.numeric(exit_date),
-        
-        followup_days = t_exit - t_entry,
-        
-        event = ifelse(
-          !is.na(event_date) &
-            event_date <= death_date2 &
-            event_date <= ADMIN_CENSOR_DATE,
-          1, 0
-        )
-      ) %>%
-      
-      dplyr::filter(t_exit > t_entry)
-    
-    cat("\n---", cancer_type, predictor, "---\n")
-    cat("N:", nrow(df), "Events:", sum(df$event), "\n")
-    
-    if (nrow(df) < 50 || sum(df$event) < 10) next
-    
-    # =========================
-    # MODEL WITH STRATIFIED CENTRE
-    # =========================
-    
-    form <- reformulate(
-      termlabels = c(
-        predictor,
-        covariates,
-        "strata(centre)"
-      ),
-      response = "Surv(t_entry, t_exit, event)"
-    )
-    
-    fit <- tryCatch(
-      survival::coxph(form, data = df, x = TRUE),
-      error = function(e) {
-        cat("COX FAILED:", e$message, "\n")
-        return(NULL)
-      }
-    )
-    
-    if (is.null(fit)) next
-    
-    # =========================
-    # PH ASSUMPTION TEST
-    # =========================
-    
-    ph_test <- tryCatch(
-      survival::cox.zph(fit),
-      error = function(e) return(NULL)
-    )
-    
-    ph_global_p <- NA
-    ph_predictor_p <- NA
-    
-    if (!is.null(ph_test)) {
-      print(ph_test)
-      
-      ph_global_p <- ph_test$table["GLOBAL", "p"]
-      
-      if (predictor %in% rownames(ph_test$table)) {
-        ph_predictor_p <- ph_test$table[predictor, "p"]
-      }
-    }
-    
-    # =========================
-    # OUTPUT
-    # =========================
-    
-    res <- broom::tidy(fit, conf.int = TRUE) %>%
-      dplyr::filter(term == predictor) %>%
-      dplyr::mutate(
-        cancer_type = cancer_type,
-        predictor = predictor,
-        N = nrow(df),
-        events = sum(df$event),
-        cutoff_years = cutoff_years,
-        ph_global_p = ph_global_p,
-        ph_predictor_p = ph_predictor_p,
-        model_type = "stratified_by_centre"
+      event = ifelse(
+        !is.na(event_date) &
+          event_date <= death_date2 &
+          event_date <= ADMIN_CENSOR_DATE,
+        1, 0
       )
+    ) %>%
     
-    results_list[[length(results_list) + 1]] <- res
+    filter(
+      age_exit > age_entry,
+      !is.na(.data[[protein]]),
+      !is.na(centre)
+    )
+  
+  ## Skip small / empty models
+  if (nrow(df) < 50 || sum(df$event) < 10) return(NULL)
+  
+  ## =========================================
+  ## Cox model
+  ## =========================================
+  
+  form <- as.formula(
+    paste0(
+      "Surv(age_entry, age_exit, event) ~ ",
+      protein,
+      " + sex + smoking + alcohol + education + bmi",
+      " + strata(centre)"
+    )
+  )
+  
+  fit <- survival::coxph(form, data = df, x = TRUE)
+  
+  ## PH test (safe)
+  ph_test <- tryCatch(
+    survival::cox.zph(fit),
+    error = function(e) NULL
+  )
+  
+  ## Extract results
+  res <- broom::tidy(fit, conf.int = TRUE) %>%
+    filter(term == protein) %>%
+    mutate(
+      cancer_type = cancer,
+      protein = protein,
+      N = nrow(df),
+      events = sum(df$event),
+      cutoff_years = cutoff_years,
+      HR = exp(estimate),
+      HR_conf_low = exp(conf.low),
+      HR_conf_high = exp(conf.high)
+    )
+  
+  ## PH results
+  if (!is.null(ph_test)) {
+    ph_tab <- ph_test$table
+    res$ph_global_p <- ph_tab["GLOBAL", "p"]
+    
+    res$ph_protein_p <- if (protein %in% rownames(ph_tab)) {
+      ph_tab[protein, "p"]
+    } else {
+      NA
+    }
+  } else {
+    res$ph_global_p <- NA
+    res$ph_protein_p <- NA
   }
   
-  dplyr::bind_rows(results_list)
+  return(res)
 }
 
+
 ## =========================================
-## Run models
+## Run all models
 ## =========================================
 
 cancer_types <- c("PC", "EC", "BC", "CRC")
@@ -1899,26 +1848,14 @@ cox_results <- purrr::map_dfr(cancer_types, function(cancer) {
 
 
 ## =========================================
-## Add hazard ratios
-## =========================================
-
-cox_results <- cox_results %>%
-  dplyr::mutate(
-    HR = exp(estimate),
-    HR_conf_low = exp(conf.low),
-    HR_conf_high = exp(conf.high)
-  )
-
-
-## =========================================
-## Save output
+## Save results
 ## =========================================
 
 write.table(
   cox_results,
   file = paste0(
     results_dir,
-    "tables/protein_cancer_incidence_cox_age_2years.txt"
+    "tables/protein_cancer_incidence_cox_fully_adjusted_bmi_2years.txt"
   ),
   sep = "\t",
   row.names = FALSE,

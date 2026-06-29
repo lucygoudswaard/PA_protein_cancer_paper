@@ -35,7 +35,7 @@ overall_PA_protein_regression_bmi <- read.table(paste0(results_dir, "tables/over
 overall_PA_protein_regression_bmi$activity_type <- "overall_acceleration_average"
 
 ## protein-cancer table cox PH
-protein_cancer_cox_bmi <- read.table(paste0(results_dir, "tables/protein_cancer_incidence_cox_age_2years.txt"), header = T, sep = "\t")
+protein_cancer_cox_bmi <- read.table(paste0(results_dir, "tables/protein_cancer_incidence_cox_fully_adjusted_bmi_2years.txt"), header = T, sep = "\t")
 
 ## Set threshold for associations in each dataframe
 overall_PA_protein_regression_bmi$category <- ifelse(overall_PA_protein_regression_bmi$P_lm < 0.05/1885, "associated", "not associated")
