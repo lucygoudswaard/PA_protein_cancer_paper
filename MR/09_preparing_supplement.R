@@ -124,7 +124,51 @@ protein_cancer_MR_overall <- protein_cancer_MR %>%
   filter(str_detect(exposure, paste(pa_prot_cancer_list, collapse = "|")))
 write.table(protein_cancer_MR_overall, file = paste0(results_dir, "tables/MR/09_protein_cancer_supp_table.txt"), col.names = T, row.names = F, sep = "\t")
 
+## Number of proteins in the protein -> cancer MR after PA subsetting
+n_distinct(protein_cancer_MR_overall$exposure)
+
+## Per cancer outcome
+protein_cancer_MR_overall %>%
+  group_by(outcome) %>%
+  summarise(n_proteins = n_distinct(exposure), .groups = "drop")
+
+## Compare against the list you subset on
+length(pa_prot_cancer_list)
+
+## Which listed proteins didn't make it into the MR (no instrument / lost at harmonisation)
+setdiff(pa_prot_cancer_list, sub("_.*", "", protein_cancer_MR_overall$exposure))
+
 ## Subset cancer_protein_MR
 cancer_protein_MR_overall <- cancer_protein_MR %>%
   filter(str_detect(outcome, paste(pa_prot_cancer_list, collapse = "|")))
 write.table(cancer_protein_MR_overall, file = paste0(results_dir, "tables/MR/09_cancer_protein_supp_table.txt"), col.names = T, row.names = F, sep = "\t")
+
+## Subset protein_cancer harmonised data (SNPs used)
+protein_cancer_harmonised <- read.table(paste0(results_dir, "tables/MR/06_protein_cancer_harmonised.txt"), header = T, sep = "\t")
+protein_cancer_harmonised_overall <- protein_cancer_harmonised %>%
+  filter(str_detect(exposure, paste(pa_prot_cancer_list, collapse = "|")))
+write.table(protein_cancer_harmonised_overall, file = paste0(results_dir, "tables/MR/09_protein_cancer_harmonised_supp_table.txt"), col.names = T, row.names = F, sep = "\t")
+
+protein_instruments <- protein_cancer_harmonised_overall %>%
+  dplyr::select(
+    gene,
+    protein = olink_target_fullname,
+    UniProt = UniProt.x,
+    olink_id,
+    SNP,
+    chr = chr.exposure,
+    pos = pos.exposure,
+    effect_allele = effect_allele.exposure,
+    other_allele  = other_allele.exposure,
+    eaf  = eaf.exposure,
+    beta = beta.exposure,
+    se   = se.exposure,
+    pval = pval.exposure,
+    samplesize = samplesize.exposure,
+    finemap = exposure_finemap
+  ) %>%
+  distinct() %>%
+  mutate(F_stat = (beta / se)^2) %>%
+  arrange(gene)
+
+write.table(protein_instruments, file = paste0(results_dir, "tables/MR/09_protein_instruments_after_harmonisation_supp_table.txt"), col.names = T, row.names = F, sep = "\t")
